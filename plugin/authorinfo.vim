@@ -3,7 +3,7 @@
 "  Email:           zny2008@gmail.com
 "  FileName:        authorinfo.vim
 "  Description:     
-"  Version:         1.5
+"  Version:         1.6
 "  LastChange:      2011-02-23 16:42:42
 "  History:         support bash's #!xxx
 "                   fix bug for NerdComment's <leader>
@@ -99,13 +99,13 @@ function s:AddTitle()
     let newline = getline('.')
     if oldline != newline
         let hasMul = 1
-        let preChar = '#'
+        let preChar = '**'
     else
         exec 'normal '.s:t_mapleader.'cl'
         let newline = getline('.')
         if oldline == newline
             let hasMul = -1
-            let noTypeChar = '#'
+            let noTypeChar = '**'
         endif
     endif
 
@@ -113,26 +113,29 @@ function s:AddTitle()
     call s:BeforeTitle()
 
     let firstLine = line('.')
-    call setline('.',noTypeChar.'=============================================================================')
+    call setline('.',noTypeChar.'*****************************************************************************')
     normal o
-    call setline('.',noTypeChar.preChar.'     FileName: '.expand("%:t"))
+    call setline('.',noTypeChar.preChar.'                Copyright (C) '.strftime("%Y").', '.g:vimrc_author.'. All Rights Reserved')
+    let gotoBlank = line('.')
     normal o
-    call setline('.',noTypeChar.preChar.'         Desc: ')
+    if hasMul == 1
+        call setline('.',noTypeChar.preChar.'  ')
+        normal o
+    endif
+    call setline('.',noTypeChar.preChar.'  FileName:   '.expand("%:t"))
+    normal o
+    call setline('.',noTypeChar.preChar.'  Desc:       ')
     let gotoLn = line('.')
     normal o
-    call setline('.',noTypeChar.preChar.'       Author: '.g:vimrc_author)
+    call setline('.',noTypeChar.preChar.'  Author:     '.g:vimrc_author)
     normal o
-    call setline('.',noTypeChar.preChar.'        Email: '.g:vimrc_email)
+    call setline('.',noTypeChar.preChar.'  Email:      '.g:vimrc_email)
     normal o
-    call setline('.',noTypeChar.preChar.'     HomePage: '.g:vimrc_homepage)
+    call setline('.',noTypeChar.preChar.'  LastChange: '.strftime("%Y-%m-%d %H:%M:%S"))
     normal o
-    call setline('.',noTypeChar.preChar.'      Version: 0.0.1')
+    call setline('.',noTypeChar.preChar.'  History:    '.strftime("%Y-%m-%d Create by ").g:vimrc_author)
     normal o
-    call setline('.',noTypeChar.preChar.'   LastChange: '.strftime("%Y-%m-%d %H:%M:%S"))
-    normal o
-    call setline('.',noTypeChar.preChar.'      History:')
-    normal o
-    call setline('.',noTypeChar.'=============================================================================')
+    call setline('.',noTypeChar.'*****************************************************************************')
     let lastLine = line('.')
 
     "在最后一行之后做的事情
@@ -144,9 +147,14 @@ function s:AddTitle()
         exe 'normal '.firstLine.'Gv'.lastLine.'G'.s:t_mapleader.'cl'
     endif
 
+    if hasMul == 0
+        exe 'normal '.gotoBlank.'G'
+        normal o
+        let gotoLn = gotoLn + 1
+    endif
+
     exe 'normal '.gotoLn.'G'
     startinsert!
-    echohl WarningMsg | echo "Succ to add the copyright." | echohl None
 endf
 function s:TitleDet()
     silent! normal ms
@@ -155,21 +163,38 @@ function s:TitleDet()
     "默认为添加
     while n < 20
         let line = getline(n)
-        if line =~ '^.*FileName:\S*.*$'
+        if line =~ '^.*FileName\S*.*$'
             let newline=substitute(line,':\(\s*\)\(\S.*$\)$',':\1'.expand("%:t"),'g')
             call setline(n,newline)
             let updated = 1
         endif
-        if line =~ '^.*LastChange:\S*.*$'
+        if line =~ '^.*LastChange\S*.*$'
             let newline=substitute(line,':\(\s*\)\(\S.*$\)$',':\1'.strftime("%Y-%m-%d %H:%M:%S"),'g')
             call setline(n,newline)
             let updated = 1
+        endif
+        if line =~ '^.*History\S*.*$'
+            let newline=substitute(line,':\(\s*\)\(\S.*$\)$',':\1'.strftime("%Y-%m-%d Modify by ").g:vimrc_author,'g')
+            let newline=substitute(newline,'History','       ','g')
+            let newline=substitute(newline,':',' ','g')
+            while 1
+                let n = n + 1
+                let line = getline(n)
+                if line !~ '^.*Modify\S*.*$'
+                    let n = n - 1
+                    exe 'normal '.n.'G'
+                    normal o
+                    call setline('.',newline)
+                    let updated = 1
+                    let n = n + 1
+                    break
+                endif
+            endwhile
         endif
         let n = n + 1
     endwhile
     if updated == 1
         silent! normal 's
-        echohl WarningMsg | echo "Succ to update the copyright." | echohl None
         return
     endif
     call s:AddTitle()
